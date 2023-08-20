@@ -29,7 +29,39 @@ var storage = diskStorage({
     }
 });
 
-var upload = multer({ storage: storage });
+var upload = multer({
+    storage: storage,
+}).fields([
+    {
+        name: 'StudentPhoto', maxCount: 1
+    }, {
+        name: 'FatherPhoto', maxCount: 1
+    }, {
+        name: 'MotherPhoto', maxCount: 1
+    }, {
+        name: 'StudentSignature', maxCount: 1
+    }, {
+        name: 'ParentSignature', maxCount: 1
+    }, {
+        name: 'TransferCertificate', maxCount: 1
+    }, {
+        name: 'SSLCCertificate', maxCount: 1
+    }, {
+        name: 'HSCFirstYear', maxCount: 1
+    }, {
+        name: 'HSCSecondYear', maxCount: 1
+    }, {
+        name: 'MigrationCertificate', maxCount: 1
+    }, {
+        name: 'CommunityCertificate', maxCount: 1
+    }, {
+        name: 'ProvisionalAllotmentLetter', maxCount: 1
+    }, {
+        name: 'AffidavitByStudent', maxCount: 1
+    }, {
+        name: 'AffidavitByParent', maxCount: 1
+    },
+]);
 
 const cloudStorage = new Storage({
     keyFilename: `./service_account_key.json`,
@@ -38,22 +70,29 @@ const cloudStorage = new Storage({
 
 const bucket = cloudStorage.bucket(process.env.BUCKET_NAME);
 
-app.post("/api/upload/:reg", upload.array("files"), (req, res) => {
-    const folderName = req.params;
+app.post("/api/upload/:reg", upload, (req, res) => {
 
-    req.files.forEach(function (file) {
+    const folderName = req.params;
+    const files = req.files;
+
+    Object.keys(files).map((f) => {
+
+        const fileArray = files[f];
+        const file = fileArray[0];
+
         if (!file) {
             res.status(400).send("No file uploaded.");
             return;
         }
-        const blob = bucket.file(folderName.reg + '/' + file.originalname);
+        const blob = bucket.file(folderName.reg + '/' + file.fieldname + '/' + file.originalname);
         const blobStream = blob.createWriteStream();
 
         blobStream.on("error", (err) => {
             next(err);
         });
         blobStream.on("finish", () => {
-            const publicUrl = format(`https://storage.googleapis.com/${bucket.name}/${blob.name}`); // for response
+            const publicUrl = format(`https://storage.cloud.google.com/${bucket.name}/${folderName.reg}/${file.fieldname}/${file.originalname}`);
+            console.log(publicUrl);
         });
         blobStream.end(file.buffer);
     })
