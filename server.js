@@ -36,26 +36,24 @@ const cloudStorage = new Storage({
     projectId: process.env.PROJECT_ID,
 });
 
-const bucketName = process.env.BUCKET_NAME;
-const bucket = cloudStorage.bucket(bucketName);
+const bucket = cloudStorage.bucket(process.env.BUCKET_NAME);
 
-const Files = new FormData();
-
-app.post("/api/upload", upload.array("files"), (req, res) => {
+app.post("/api/upload/:reg", upload.array("files"), (req, res) => {
+    const folderName = req.params;
 
     req.files.forEach(function (file) {
         if (!file) {
             res.status(400).send("No file uploaded.");
             return;
         }
-        const blob = bucket.file(file.originalname);
+        const blob = bucket.file(folderName.reg + '/' + file.originalname);
         const blobStream = blob.createWriteStream();
+
         blobStream.on("error", (err) => {
             next(err);
         });
         blobStream.on("finish", () => {
-            const publicUrl = format(`https://storage.googleapis.com/${bucket.name}/${blob.name}`);
-            Files.append(file.originalname, publicUrl);
+            const publicUrl = format(`https://storage.googleapis.com/${bucket.name}/${blob.name}`); // for response
         });
         blobStream.end(file.buffer);
     })
@@ -78,10 +76,8 @@ app.post("/api/submit", (req, res) => {
 
     pool.query("INSERT INTO BioData VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", Object.values(data), (err) => {
         if (err) {
-            console.log(err); //remove
             res.send(err.code);
         } else {
-            console.log("Data Added Successfully."); //remove
             res.send('Data Added').status(200);
         }
     });
@@ -89,6 +85,4 @@ app.post("/api/submit", (req, res) => {
     pool.end();
 });
 
-app.listen(port, () => {
-    console.log(`listening at => http://localhost:${port}`);
-});
+app.listen(port);
