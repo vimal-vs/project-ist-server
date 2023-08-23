@@ -5,7 +5,7 @@ import { format } from "util";
 import Multer, { diskStorage } from "multer";
 import bodyParser from "body-parser";
 import { createConnection } from "mysql";
-import 'dotenv/config'
+import 'dotenv/config';
 
 const app = express();
 const port = 3001;
@@ -16,16 +16,16 @@ app.use(bodyParser.json());
 const multer = () => Multer({
     storage: Multer.memoryStorage(),
     limits: {
-        fileSize: 2 * 1024 * 1024, //2mb max
-    },
+        fileSize: 2 * 1024 * 1024
+    }
 });
 
 var storage = diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'public/temp')
+        cb(null, 'public/temp');
     },
     filename: function (req, file, cb) {
-        cb(null, file.originalname)
+        cb(null, file.originalname);
     }
 });
 
@@ -35,7 +35,7 @@ var upload = multer({
     {
         name: 'StudentPhoto', maxCount: 1
     }, {
-        name: 'FatherPhoto', maxCount: 1
+        name: 'FatherGuardianPhoto', maxCount: 1
     }, {
         name: 'MotherPhoto', maxCount: 1
     }, {
@@ -47,9 +47,9 @@ var upload = multer({
     }, {
         name: 'SSLCCertificate', maxCount: 1
     }, {
-        name: 'HSCFirstYear', maxCount: 1
+        name: 'HSCFirstYearCertificate', maxCount: 1
     }, {
-        name: 'HSCSecondYear', maxCount: 1
+        name: 'HSCSecondYearCertificate', maxCount: 1
     }, {
         name: 'MigrationCertificate', maxCount: 1
     }, {
@@ -60,20 +60,41 @@ var upload = multer({
         name: 'AffidavitByStudent', maxCount: 1
     }, {
         name: 'AffidavitByParent', maxCount: 1
-    },
+    }
 ]);
+
+var DOCUMENTS = {
+    ApplicationNumber: "",
+    StudentPhoto: "",
+    FatherGuardianPhoto: "",
+    MotherPhoto: "",
+    StudentSignature: "",
+    ParentSignature: "",
+    TransferCertificate: "",
+    SSLCCertificate: "",
+    HSCFirstYearCertificate: "",
+    HSCSecondYearCertificate: "",
+    MigrationCertificate: "",
+    CommunityCertificate: "",
+    ProvisionalAllotmentLetter: "",
+    AffidavitByStudent: "",
+    AffidavitByParent: "",
+}
 
 const cloudStorage = new Storage({
     keyFilename: `./service_account_key.json`,
-    projectId: process.env.PROJECT_ID,
+    projectId: process.env.PROJECT_ID
 });
 
 const bucket = cloudStorage.bucket(process.env.BUCKET_NAME);
+
 
 app.post("/api/upload/:reg", upload, (req, res) => {
 
     const folderName = req.params;
     const files = req.files;
+
+    DOCUMENTS["ApplicationNumber"] = folderName.reg;
 
     Object.keys(files).map((f) => {
 
@@ -91,15 +112,14 @@ app.post("/api/upload/:reg", upload, (req, res) => {
             next(err);
         });
         blobStream.on("finish", () => {
-            const publicUrl = format(`https://storage.cloud.google.com/${bucket.name}/${folderName.reg}/${file.fieldname}/${file.originalname}`);
-            console.log(publicUrl);
+            const publicURL = format(`https://storage.cloud.google.com/${bucket.name}/${folderName.reg}/${file.fieldname}/${file.originalname}`);
         });
         blobStream.end(file.buffer);
     })
     res.send('Files Uploaded').status(200);
 });
 
-app.post("/api/submit", (req, res) => {
+app.post("/api/submit/:reg", (req, res) => {
 
     const data = req.body.data;
 
@@ -113,11 +133,18 @@ app.post("/api/submit", (req, res) => {
 
     pool.connect();
 
-    pool.query("INSERT INTO BioData VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", Object.values(data), (err) => {
+    pool.query("INSERT INTO Data VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", Object.values(data), (err) => {
         if (err) {
             res.send(err.code);
-        } else {
+        }
+        else {
             res.send('Data Added').status(200);
+        }
+    });
+
+    pool.query("INSERT INTO Documents VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", Object.values(DOCUMENTS), (err) => {
+        if (err) {
+            console.log(err);
         }
     });
 
