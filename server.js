@@ -10,7 +10,13 @@ import 'dotenv/config';
 const app = express();
 const port = 3001;
 
-app.use(cors());
+const corsOptions = {
+    origin: 'http://localhost:3000',
+    credentials: true,
+    optionSuccessStatus: 200
+}
+
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 
 const multer = () => Multer({
@@ -63,24 +69,6 @@ var upload = multer({
     }
 ]);
 
-var DOCUMENTS = {
-    ApplicationNumber: "",
-    StudentPhoto: "",
-    FatherGuardianPhoto: "",
-    MotherPhoto: "",
-    StudentSignature: "",
-    ParentSignature: "",
-    TransferCertificate: "",
-    SSLCCertificate: "",
-    HSCFirstYearCertificate: "",
-    HSCSecondYearCertificate: "",
-    MigrationCertificate: "",
-    CommunityCertificate: "",
-    ProvisionalAllotmentLetter: "",
-    AffidavitByStudent: "",
-    AffidavitByParent: "",
-}
-
 const cloudStorage = new Storage({
     keyFilename: `./service_account_key.json`,
     projectId: process.env.PROJECT_ID
@@ -88,13 +76,10 @@ const cloudStorage = new Storage({
 
 const bucket = cloudStorage.bucket(process.env.BUCKET_NAME);
 
-
 app.post("/api/upload/:reg", upload, (req, res) => {
 
     const folderName = req.params;
     const files = req.files;
-
-    DOCUMENTS["ApplicationNumber"] = folderName.reg;
 
     Object.keys(files).map((f) => {
 
@@ -139,12 +124,6 @@ app.post("/api/submit/:reg", (req, res) => {
         }
         else {
             res.send('Data Added').status(200);
-        }
-    });
-
-    pool.query("INSERT INTO Documents VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", Object.values(DOCUMENTS), (err) => {
-        if (err) {
-            console.log(err);
         }
     });
 
