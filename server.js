@@ -10,13 +10,7 @@ import 'dotenv/config';
 const app = express();
 const port = 3001;
 
-const corsOptions = {
-    origin: 'http://localhost:3000',
-    credentials: true,
-    optionSuccessStatus: 200
-}
-
-app.use(cors(corsOptions));
+app.use(cors());
 app.use(bodyParser.json());
 
 const multer = () => Multer({
@@ -75,6 +69,19 @@ const cloudStorage = new Storage({
 });
 
 const bucket = cloudStorage.bucket(process.env.BUCKET_NAME);
+
+app.use((req, res, next) => {
+
+    const referer = req.get('Referer');
+
+    if (referer && referer.startsWith("https://sdata.srmtrichy.edu.in")) {
+        next();
+    }
+    else {
+        res.status(403).send('Unauthorized');
+    }
+});
+
 
 app.post("/api/upload/:reg", upload, (req, res) => {
 
